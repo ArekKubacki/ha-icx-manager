@@ -2,7 +2,7 @@
 
 Lokalna integracja **Brocade / Ruckus ICX** dla Home Assistant, opracowana początkowo dla **ICX6450-48P**, korzystająca z **SNMPv3**.
 
-> **v0.2.0 — wersja testowa**. Kod sprawdzony pod kątem składni i testów funkcji pomocniczych. Wymaga jeszcze testów na fizycznym switchu przed normalnym użytkowaniem.
+> **v0.2.1 — wersja testowa**. Kod sprawdzony pod kątem składni i testów funkcji pomocniczych. Wymaga jeszcze testów na fizycznym switchu przed normalnym użytkowaniem.
 
 ## Funkcje
 
@@ -95,3 +95,21 @@ Gdy masz więcej niż jeden switch, podaj dodatkowo `device: "adres-IP:161"`.
 **Uwaga:** do wyłączania całych portów Ethernet przejdź do **Opcji integracji** i włącz odpowiednią funkcję. Karta poprosi o potwierdzenie administracyjnego włączenia lub wyłączenia portu. Standardowa encja HA może jednak zostać przełączona bez tego potwierdzenia. Nie wyłączaj uplinku ani portu zapewniającego dostęp do Home Assistant.
 
 Całkowita moc PoE to suma odczytanych wartości. Jeśli brakuje odczytów dla niektórych portów, sensor ma atrybut `partial: true` i liczby `measured_ports`, `poe_ports`; nie jest to gwarantowany budżet PoE.
+
+## Edytor wizualny i szybsza karta (v0.2.1)
+
+Edytuj kartę, aby ustawić: tytuł, switch, liczbę portów w rzędzie na komputerze i telefonie, wysokość kafelków, maksymalną szerokość oraz własną nazwę każdego portu. W widoku Sekcje szerokość całej karty ustawisz również narzędziem rozmiaru karty Home Assistant. Przy mniejszej liczbie portów siatka sama skróci liczbę kolumn. Nazwy zapisywane są w konfiguracji tej karty (`port_names`), a nie na switchu. W przypadku braku nazwy pojawi się opis SNMP, a następnie numer portu.
+
+Karta ignoruje zmiany niezwiązanych encji HA. Po kliknięciu PoE lub przełącznika Ethernet od razu pokazuje stan przejściowy `Zmieniam…`, aż HA potwierdzi zmianę; po 15 sekundach bez potwierdzenia zgłaszany jest problem. To szybka informacja wizualna, nie natychmiastowe potwierdzenie wykonania operacji na switchu. Administracyjne przełączniki całych portów nadal wymagają wcześniejszego włączenia w Opcjach integracji oraz potwierdzenia w karcie.
+
+```yaml
+type: custom:icx-manager-card
+title: ICX6450
+columns: 12
+mobile_columns: 6
+port_height: 40
+max_width: 0
+port_names:
+  1/1/1: AP parter
+  1/1/2: Kamera podjazd
+```

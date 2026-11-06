@@ -1,7 +1,7 @@
 {
   "domain": "icx_manager",
   "name": "ICX Manager",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "documentation": "https://github.com/ArekKubacki/ha-icx-manager",
   "issue_tracker": "https://github.com/ArekKubacki/ha-icx-manager/issues",
   "codeowners": [
