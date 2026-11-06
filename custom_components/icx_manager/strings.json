@@ -22,5 +22,16 @@
     "abort": {
       "already_configured": "Switch is already configured"
     }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Manage Ethernet ports",
+        "description": "CAUTION: Disabling the uplink or management port may cut off Home Assistant. Only enable if you know the port layout.",
+        "data": {
+          "enable_port_control": "Enable Ethernet admin ON/OFF (dangerous)"
+        }
+      }
+    }
   }
 }

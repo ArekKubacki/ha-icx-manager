@@ -3,18 +3,25 @@
 from homeassistant.components.switch import SwitchEntity
 from homeassistant.exceptions import HomeAssistantError
 
-from .const import DOMAIN, POE_DISABLED, POE_ENABLED, POE_PORT_CONTROL
+from .const import CONF_ENABLE_PORT_CONTROL, DOMAIN, IF_ADMIN_STATUS, POE_DISABLED, POE_ENABLED, POE_PORT_CONTROL
 from .entity import IcxEntity
 from .snmp import SnmpError
 
 
 async def async_setup_entry(hass, entry, async_add_entities):
     coordinator = hass.data[DOMAIN][entry.entry_id]
-    async_add_entities(
+    entities = [
         IcxPoeSwitch(coordinator, entry, port)
         for port in coordinator.data["ports"].values()
         if port["poe_index"] is not None
-    )
+    ]
+    if entry.options.get(CONF_ENABLE_PORT_CONTROL, False):
+        entities.extend(
+            IcxAdminSwitch(coordinator, entry, port)
+            for port in coordinator.data["ports"].values()
+            if port["admin_on"] is not None
+        )
+    async_add_entities(entities)
 
 
 class IcxPoeSwitch(IcxEntity, SwitchEntity):
@@ -24,6 +31,7 @@ class IcxPoeSwitch(IcxEntity, SwitchEntity):
         super().__init__(coordinator, entry, f"port_{port['label']}_poe", port)
         self._attr_name = f"Port {port['label']} PoE"
         self._poe_index = port["poe_index"]
+        self._icx_metric = "poe"
 
     @property
     def is_on(self) -> bool | None:
@@ -49,3 +57,35 @@ class IcxPoeSwitch(IcxEntity, SwitchEntity):
 
     async def async_turn_off(self, **kwargs) -> None:
         await self._set_poe(False)
+
+
+class IcxAdminSwitch(IcxEntity, SwitchEntity):
+    """Opt-in SNMP SET for interface administrative status, not PoE."""
+
+    def __init__(self, coordinator, entry, port):
+        super().__init__(coordinator, entry, f"port_{port['label']}_admin", port)
+        self._attr_name = f"Port {port['label']} Ethernet enabled"
+        self._attr_icon = "mdi:ethernet"
+        self._icx_metric = "admin"
+
+    @property
+    def is_on(self) -> bool | None:
+        return self.port["admin_on"] if self.port else None
+
+    async def _set_admin(self, enabled: bool) -> None:
+        # No retries: this SET can disconnect the switch from HA.
+        try:
+            await self.coordinator.client.set_integer(
+                f"{IF_ADMIN_STATUS}.{self.port_index}", 1 if enabled else 2
+            )
+        except (SnmpError, OSError, TimeoutError) as exc:
+            raise HomeAssistantError(
+                f"Cannot change Ethernet state for {self._label}: {exc}"
+            ) from exc
+        await self.coordinator.async_request_refresh()
+
+    async def async_turn_on(self, **kwargs) -> None:
+        await self._set_admin(True)
+
+    async def async_turn_off(self, **kwargs) -> None:
+        await self._set_admin(False)

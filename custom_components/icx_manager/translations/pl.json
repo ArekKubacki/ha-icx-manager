@@ -22,5 +22,16 @@
     "abort": {
       "already_configured": "Ten przełącznik jest już skonfigurowany"
     }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Zarządzanie portami Ethernet",
+        "description": "UWAGA: Wyłączenie uplinku lub portu zarządzania może odciąć Home Assistant. Używaj tylko jeśli znasz układ połączeń.",
+        "data": {
+          "enable_port_control": "Włącz administracyjne ON/OFF portów Ethernet (ryzykowne)"
+        }
+      }
+    }
   }
 }

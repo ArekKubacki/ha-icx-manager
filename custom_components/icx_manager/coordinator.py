@@ -1,4 +1,4 @@
-"""Poll an ICX switch and correlate the physical and PoE interface tables."""
+"""Poll ICX and correlate physical ports with PoE interfaces."""
 
 from __future__ import annotations
 
@@ -10,10 +10,10 @@ from time import monotonic
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import (
-    DOMAIN, IF_ALIAS, IF_HC_IN_OCTETS, IF_HC_OUT_OCTETS,
-    IF_NAME, IF_OPER_STATUS, POE_PORT_CONSUMED,
-    POE_PORT_CONTROL, POE_PORT_IFINDEX, SCAN_INTERVAL,
-    SYS_NAME, SYS_UPTIME,
+    DOMAIN, IF_ADMIN_STATUS, IF_ALIAS, IF_HC_IN_OCTETS, IF_HC_OUT_OCTETS,
+    IF_HIGH_SPEED, IF_IN_DISCARDS, IF_IN_ERRORS, IF_NAME, IF_OPER_STATUS,
+    IF_OUT_DISCARDS, IF_OUT_ERRORS, POE_PORT_CONSUMED, POE_PORT_CONTROL,
+    POE_PORT_IFINDEX, SCAN_INTERVAL, SYS_NAME, SYS_UPTIME,
 )
 from .snmp import IcxSnmpClient, SnmpError
 from .util import mbps_from_octets, physical_port
@@ -22,7 +22,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 class IcxCoordinator(DataUpdateCoordinator):
-    """A coordinated snapshot of link, traffic and power."""
+    """Coordinated snapshot of link, traffic, errors and power."""
 
     def __init__(self, hass, client: IcxSnmpClient) -> None:
         super().__init__(
@@ -46,6 +46,7 @@ class IcxCoordinator(DataUpdateCoordinator):
             (
                 sysname, uptime, names, statuses, poe_ifindex,
                 poe_controls, aliases, consumed, in_octets, out_octets,
+                admin, speeds, in_errors, out_errors, in_discards, out_discards,
             ) = await asyncio.gather(
                 self.client.get(SYS_NAME),
                 self.client.get(SYS_UPTIME),
@@ -57,12 +58,18 @@ class IcxCoordinator(DataUpdateCoordinator):
                 optional_walk(POE_PORT_CONSUMED),
                 optional_walk(IF_HC_IN_OCTETS),
                 optional_walk(IF_HC_OUT_OCTETS),
+                optional_walk(IF_ADMIN_STATUS),
+                optional_walk(IF_HIGH_SPEED),
+                optional_walk(IF_IN_ERRORS),
+                optional_walk(IF_OUT_ERRORS),
+                optional_walk(IF_IN_DISCARDS),
+                optional_walk(IF_OUT_DISCARDS),
             )
         except (SnmpError, OSError, TimeoutError) as exc:
             raise UpdateFailed(f"ICX SNMP unavailable: {exc}") from exc
 
         if not names:
-            raise UpdateFailed("ICX did not return the ifName table")
+            raise UpdateFailed("ICX did not return ifName")
 
         now = monotonic()
         elapsed = now - self._previous_time if self._previous_time is not None else 0
@@ -74,7 +81,7 @@ class IcxCoordinator(DataUpdateCoordinator):
         if rebooted:
             self._previous_counters.clear()
 
-        ports: dict[int, dict] = {}
+        ports = {}
         for ifindex, raw_name in names.items():
             label = physical_port(str(raw_name))
             if label is None:
@@ -84,13 +91,28 @@ class IcxCoordinator(DataUpdateCoordinator):
             previous_in, previous_out = self._previous_counters.get(
                 ifindex, (None, None)
             )
+            rx = mbps_from_octets(current_in, previous_in, elapsed)
+            tx = mbps_from_octets(current_out, previous_out, elapsed)
+            speed = int(speeds[ifindex]) if ifindex in speeds else None
+            if speed is not None and speed <= 0:
+                speed = None
             ports[ifindex] = {
                 "ifindex": ifindex,
                 "label": label,
                 "alias": str(aliases.get(ifindex, "")),
                 "link": int(statuses[ifindex]) == 1 if ifindex in statuses else None,
-                "rx_mbps": mbps_from_octets(current_in, previous_in, elapsed),
-                "tx_mbps": mbps_from_octets(current_out, previous_out, elapsed),
+                "admin_on": int(admin[ifindex]) == 1 if ifindex in admin else None,
+                "speed_mbps": speed,
+                "rx_mbps": rx,
+                "tx_mbps": tx,
+                "rx_percent": round(rx / speed * 100, 2)
+                if rx is not None and speed else None,
+                "tx_percent": round(tx / speed * 100, 2)
+                if tx is not None and speed else None,
+                "in_errors": int(in_errors[ifindex]) if ifindex in in_errors else None,
+                "out_errors": int(out_errors[ifindex]) if ifindex in out_errors else None,
+                "in_discards": int(in_discards[ifindex]) if ifindex in in_discards else None,
+                "out_discards": int(out_discards[ifindex]) if ifindex in out_discards else None,
                 "has_rx": current_in is not None,
                 "has_tx": current_out is not None,
                 "poe_index": None,
@@ -99,7 +121,7 @@ class IcxCoordinator(DataUpdateCoordinator):
             }
             self._previous_counters[ifindex] = (current_in, current_out)
 
-        # Never guess a PoE row index from the front-panel port number.
+        # The PoE table is indexed separately; use the actual ifIndex mapping.
         for poe_index, raw_ifindex in poe_ifindex.items():
             try:
                 ifindex = int(raw_ifindex)
@@ -118,10 +140,15 @@ class IcxCoordinator(DataUpdateCoordinator):
                 if poe_index in consumed else None
             )
 
+        poe_ports = [p for p in ports.values() if p["poe_index"] is not None]
+        measured = [p["poe_watts"] for p in poe_ports if p["poe_watts"] is not None]
         self._previous_time = now
         self._previous_uptime = ticks
         return {
             "name": str(sysname) if sysname is not None else self.client.host,
             "uptime": ticks / 100 if ticks is not None else None,
+            "poe_total_watts": round(sum(measured), 3) if measured else None,
+            "poe_port_count": len(poe_ports),
+            "poe_measured_count": len(measured),
             "ports": ports,
         }

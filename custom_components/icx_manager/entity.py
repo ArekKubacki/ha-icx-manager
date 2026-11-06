@@ -1,4 +1,4 @@
-"""Base entity and device registry metadata for the switch."""
+"""Shared Home Assistant device metadata for ICX entities."""
 
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -7,7 +7,7 @@ from .const import DOMAIN
 
 
 class IcxEntity(CoordinatorEntity):
-    """Entities for the same switch share a Home Assistant device."""
+    """Entities for the same switch share a device."""
 
     _attr_has_entity_name = True
 
@@ -16,6 +16,8 @@ class IcxEntity(CoordinatorEntity):
         self.port_index = port["ifindex"] if port is not None else None
         self._label = port["label"] if port is not None else None
         self._attr_unique_id = f"{entry.unique_id}_{suffix}"
+        self._icx_device = entry.unique_id
+        self._icx_metric = suffix
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, entry.unique_id)},
             name=coordinator.data["name"],
@@ -25,10 +27,22 @@ class IcxEntity(CoordinatorEntity):
 
     @property
     def port(self):
-        """Read the latest port snapshot, not the initial one."""
         if self.port_index is None:
             return None
         return self.coordinator.data["ports"].get(self.port_index)
+
+    @property
+    def extra_state_attributes(self):
+        attrs = {
+            "icx_device": self._icx_device,
+            "icx_metric": self._icx_metric,
+        }
+        if self.port_index is not None:
+            attrs["icx_port"] = self._label
+            attrs["icx_ifindex"] = self.port_index
+            if self.port and self.port["alias"]:
+                attrs["description"] = self.port["alias"]
+        return attrs
 
     @property
     def available(self) -> bool:

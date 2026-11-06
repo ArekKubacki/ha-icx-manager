@@ -23,14 +23,9 @@ class IcxLink(IcxEntity, BinarySensorEntity):
     def __init__(self, coordinator, entry, port):
         super().__init__(coordinator, entry, f"port_{port['label']}_link", port)
         self._attr_name = f"Port {port['label']} link"
+        self._icx_metric = "link"
 
     @property
     def is_on(self):
         return self.port["link"] if self.port else None
 
-    @property
-    def extra_state_attributes(self):
-        return (
-            {"description": self.port["alias"]}
-            if self.port and self.port["alias"] else None
-        )
