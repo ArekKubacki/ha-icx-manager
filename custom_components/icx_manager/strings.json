@@ -1,0 +1,26 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect to ICX switch",
+        "description": "Set SNMPv3 credentials with access to IF-MIB and FDRY-POE-MIB. PoE control also requires SNMP SET permission.",
+        "data": {
+          "host": "Switch IP address or hostname",
+          "port": "SNMP port",
+          "username": "SNMPv3 username",
+          "auth_protocol": "Authentication protocol",
+          "auth_password": "Authentication password",
+          "priv_protocol": "Encryption protocol",
+          "priv_password": "Encryption password"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Cannot connect or SNMP credentials were rejected",
+      "invalid_security": "Check SNMPv3 authentication and encryption passwords and protocols"
+    },
+    "abort": {
+      "already_configured": "Switch is already configured"
+    }
+  }
+}

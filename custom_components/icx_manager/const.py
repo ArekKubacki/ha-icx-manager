@@ -1,0 +1,27 @@
+"""Constants and numeric SNMP OIDs for ICX Manager."""
+
+DOMAIN = "icx_manager"
+DEFAULT_PORT = 161
+SCAN_INTERVAL = 30
+
+CONF_AUTH_PROTOCOL = "auth_protocol"
+CONF_AUTH_PASSWORD = "auth_password"
+CONF_PRIV_PROTOCOL = "priv_protocol"
+CONF_PRIV_PASSWORD = "priv_password"
+
+SYS_NAME = "1.3.6.1.2.1.1.5.0"
+SYS_UPTIME = "1.3.6.1.2.1.1.3.0"
+IF_NAME = "1.3.6.1.2.1.31.1.1.1.1"
+IF_ALIAS = "1.3.6.1.2.1.31.1.1.1.18"
+IF_OPER_STATUS = "1.3.6.1.2.1.2.2.1.8"
+IF_HC_IN_OCTETS = "1.3.6.1.2.1.31.1.1.1.6"
+IF_HC_OUT_OCTETS = "1.3.6.1.2.1.31.1.1.1.10"
+
+# FDRY-POE-MIB. The index is not necessarily the front-panel port number.
+POE_PORT_IFINDEX = "1.3.6.1.4.1.1991.1.1.2.14.2.2.1.1"
+POE_PORT_CONTROL = "1.3.6.1.4.1.1991.1.1.2.14.2.2.1.2"
+POE_PORT_CONSUMED = "1.3.6.1.4.1.1991.1.1.2.14.2.2.1.6"
+
+POE_DISABLED = 2
+POE_ENABLED = 3
+POE_ENABLED_LEGACY = 4

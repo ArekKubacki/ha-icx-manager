@@ -1,0 +1,26 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Połącz z przełącznikiem ICX",
+        "description": "Podaj dane SNMPv3 z dostępem do IF-MIB i FDRY-POE-MIB. Sterowanie PoE wymaga również uprawnień SNMP SET.",
+        "data": {
+          "host": "Adres IP lub nazwa switcha",
+          "port": "Port SNMP",
+          "username": "Użytkownik SNMPv3",
+          "auth_protocol": "Protokół uwierzytelniania",
+          "auth_password": "Hasło uwierzytelniania",
+          "priv_protocol": "Protokół szyfrowania",
+          "priv_password": "Hasło szyfrowania"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Nie można połączyć się ze switchem lub dane SNMP są niepoprawne",
+      "invalid_security": "Sprawdź protokoły i hasła SNMPv3"
+    },
+    "abort": {
+      "already_configured": "Ten przełącznik jest już skonfigurowany"
+    }
+  }
+}

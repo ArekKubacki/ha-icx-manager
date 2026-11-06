@@ -1,0 +1,16 @@
+{
+  "domain": "icx_manager",
+  "name": "ICX Manager",
+  "version": "0.1.0",
+  "documentation": "https://github.com/ArekKubacki/ha-icx-manager",
+  "issue_tracker": "https://github.com/ArekKubacki/ha-icx-manager/issues",
+  "codeowners": [
+    "@ArekKubacki"
+  ],
+  "config_flow": true,
+  "integration_type": "hub",
+  "iot_class": "local_polling",
+  "requirements": [
+    "pysnmp>=7.1.0,<8.0.0"
+  ]
+}
