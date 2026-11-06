@@ -2,7 +2,7 @@
 
 Lokalna integracja **Brocade / Ruckus ICX** dla Home Assistant, opracowana początkowo dla **ICX6450-48P**, korzystająca z **SNMPv3**.
 
-> **v0.1.1 — wersja testowa**. Kod sprawdzony pod kątem składni i testów funkcji pomocniczych. Wymaga jeszcze testów na fizycznym switchu przed normalnym użytkowaniem.
+> **v0.2.0 — wersja testowa**. Kod sprawdzony pod kątem składni i testów funkcji pomocniczych. Wymaga jeszcze testów na fizycznym switchu przed normalnym użytkowaniem.
 
 ## Funkcje
 
@@ -10,6 +10,10 @@ Lokalna integracja **Brocade / Ruckus ICX** dla Home Assistant, opracowana pocz�
 - Stan połączenia fizycznego **Link UP/DOWN**.
 - Pobór mocy PoE na port (**W**) — gdy switch udostępnia pomiar.
 - Bieżące **RX i TX w Mbit/s**, z 64-bitowych liczników SNMP — gdy są dostępne.
+- Sumaryczny **pobór mocy PoE (W)** z pomiarów portów (nie maksymalny budżet zasilacza).
+- Prędkość negocjacji łącza, wykorzystanie RX/TX (%) oraz liczniki błędów i odrzuconych pakietów — o ile urządzenie je raportuje.
+- **Administracyjne ON/OFF portu Ethernet** (niezależnie od PoE) przez SNMP ifAdminStatus; domyślnie wyłączone, wymaga włączenia w Opcjach integracji.
+- **Karta dashboardu** pokazująca podsumowanie wszystkich portów i szczegóły.
 - **Uptime** switcha i konfiguracja SNMPv3 w UI Home Assistant.
 - Odpytywanie co 30 sekund, wyłącznie lokalnie.
 
@@ -75,3 +79,19 @@ Gdy brakuje PoE lub odczyt jest błędny, prześlij **wyłącznie wyniki odczyt�
 `python -m pytest -q tests`
 
 Projekt nie wykorzystuje SSH i nie wysyła żadnych poleceń konfiguracji switcha poza SNMP SET w tabeli PoE. 
+
+## Karta ICX Manager do Home Assistant
+
+Po załadowaniu integracji adres karty to `/icx-manager/icx-manager-card.js`.
+W **Ustawienia → Dashboardy → Zasoby (Resources)** dodaj ten adres jako zasób **JavaScript module**. Potem w edytorze dashboardu dodaj kartę ręcznie:
+
+```yaml
+type: custom:icx-manager-card
+title: Brocade ICX6450-48P
+```
+
+Gdy masz więcej niż jeden switch, podaj dodatkowo `device: "adres-IP:161"`.
+
+**Uwaga:** do wyłączania całych portów Ethernet przejdź do **Opcji integracji** i włącz odpowiednią funkcję. Karta poprosi o potwierdzenie administracyjnego włączenia lub wyłączenia portu. Standardowa encja HA może jednak zostać przełączona bez tego potwierdzenia. Nie wyłączaj uplinku ani portu zapewniającego dostęp do Home Assistant.
+
+Całkowita moc PoE to suma odczytanych wartości. Jeśli brakuje odczytów dla niektórych portów, sensor ma atrybut `partial: true` i liczby `measured_ports`, `poe_ports`; nie jest to gwarantowany budżet PoE.
