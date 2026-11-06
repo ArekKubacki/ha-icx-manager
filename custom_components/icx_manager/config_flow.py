@@ -32,8 +32,8 @@ def _schema(defaults: dict | None = None):
         vol.Required(CONF_AUTH_PROTOCOL, default=defaults.get(CONF_AUTH_PROTOCOL, "SHA")):
             vol.In(["NONE", "SHA", "SHA256"]),
         vol.Optional(CONF_AUTH_PASSWORD): password_selector,
-        vol.Required(CONF_PRIV_PROTOCOL, default=defaults.get(CONF_PRIV_PROTOCOL, "AES128")):
-            vol.In(["NONE", "AES128"]),
+        vol.Required(CONF_PRIV_PROTOCOL, default=defaults.get(CONF_PRIV_PROTOCOL, "DES")):
+            vol.In(["NONE", "DES", "AES128"]),
         vol.Optional(CONF_PRIV_PASSWORD): password_selector,
     })
 

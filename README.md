@@ -2,7 +2,7 @@
 
 Lokalna integracja **Brocade / Ruckus ICX** dla Home Assistant, opracowana początkowo dla **ICX6450-48P**, korzystająca z **SNMPv3**.
 
-> **v0.1.0 — wersja testowa**. Kod sprawdzony pod kątem składni i testów funkcji pomocniczych. Wymaga jeszcze testów na fizycznym switchu przed normalnym użytkowaniem.
+> **v0.1.1 — wersja testowa**. Kod sprawdzony pod kątem składni i testów funkcji pomocniczych. Wymaga jeszcze testów na fizycznym switchu przed normalnym użytkowaniem.
 
 ## Funkcje
 
@@ -34,9 +34,13 @@ Skopiuj katalog `custom_components/icx_manager` do `<config>/custom_components/i
 W formularzu podaj adres switcha, port UDP (domyślnie 161), nazwę użytkownika, protokół autoryzacji i szyfrowania wraz z hasłami. Obsługiwane są:
 - noAuthNoPriv,
 - authNoPriv: SHA / SHA256,
-- authPriv: SHA / SHA256 + AES128.
+- authPriv: SHA / SHA256 + DES lub AES128.
 
 Do monitorowania wymagane jest SNMP **GET/WALK** na `1.3.6.1.2.1.1`, `1.3.6.1.2.1.2`, `1.3.6.1.2.1.31` oraz `1.3.6.1.4.1.1991.1.1.2.14`. Do sterowania PoE wymagane jest SNMP **SET** na `1.3.6.1.4.1.1991.1.1.2.14.2.2.1.2`.
+
+W konfiguracji ICX 6450 polecenie `snmp-server user ... v3 encrypted auth sha ... priv encrypted des ...` oznacza uwierzytelnianie SHA oraz szyfrowanie DES. Słowo `encrypted` opisuje zapis kluczy w konfiguracji switcha — do Home Assistant należy wpisać **oryginalne hasło uwierzytelniania oraz oryginalne hasło prywatności**, a nie zaszyfrowany ciąg z `show running-config`.
+
+Sprawdź też listę ACL przypisaną do grupy SNMPv3: **adres źródłowy Home Assistant** musi mieć dostęp do switcha po UDP 161. ACL dla zapisu może być bardziej restrykcyjna niż dla odczytu. Gdy `snmpwalk` działa z innego komputera, nie oznacza to, że zadziała z HA.
 
 Hasła są zapisane we wpisie konfiguracji HA — **nie publikuj ich w Issues, logach ani zrzutach ekranu**.
 

@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Connect to ICX switch",
-        "description": "Set SNMPv3 credentials with access to IF-MIB and FDRY-POE-MIB. PoE control also requires SNMP SET permission.",
+        "description": "Set SNMPv3 credentials with access to IF-MIB and FDRY-POE-MIB. PoE control also requires SNMP SET permission. Select DES on older ICX switches configured with 'priv des'. Enter the original passphrases, not encrypted keys from running-config.",
         "data": {
           "host": "Switch IP address or hostname",
           "port": "SNMP port",

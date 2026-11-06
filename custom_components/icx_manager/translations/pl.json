@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Połącz z przełącznikiem ICX",
-        "description": "Podaj dane SNMPv3 z dostępem do IF-MIB i FDRY-POE-MIB. Sterowanie PoE wymaga również uprawnień SNMP SET.",
+        "description": "Podaj dane SNMPv3 z dostępem do IF-MIB i FDRY-POE-MIB. Sterowanie PoE wymaga również uprawnień SNMP SET. Przy konfiguracji switcha z 'priv des' wybierz DES. Wpisz pierwotne hasła, a nie zaszyfrowane klucze widoczne w running-config.",
         "data": {
           "host": "Adres IP lub nazwa switcha",
           "port": "Port SNMP",

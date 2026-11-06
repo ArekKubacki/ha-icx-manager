@@ -12,6 +12,7 @@ from pysnmp.hlapi.v3arch.asyncio import (
     USM_AUTH_HMAC96_SHA,
     USM_AUTH_HMAC192_SHA256,
     USM_AUTH_NONE,
+    USM_PRIV_CBC56_DES,
     USM_PRIV_CFB128_AES,
     USM_PRIV_NONE,
     bulk_walk_cmd,
@@ -48,6 +49,7 @@ class IcxSnmpClient:
         }[config[CONF_AUTH_PROTOCOL]]
         priv_protocol = {
             "NONE": USM_PRIV_NONE,
+            "DES": USM_PRIV_CBC56_DES,
             "AES128": USM_PRIV_CFB128_AES,
         }[config[CONF_PRIV_PROTOCOL]]
         self.credentials = UsmUserData(
