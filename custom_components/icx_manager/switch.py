@@ -8,6 +8,20 @@ from .entity import IcxEntity
 from .snmp import SnmpError
 
 
+def _apply_accepted_command(coordinator, ifindex: int, **changes) -> None:
+    """Publish a successful SNMP SET without waiting for all SNMP walks.
+
+    The next scheduled poll will independently reconcile real device state.
+    """
+    current = coordinator.data
+    port = current["ports"].get(ifindex)
+    if port is None:
+        return
+    ports = dict(current["ports"])
+    ports[ifindex] = {**port, **changes}
+    coordinator.async_set_updated_data({**current, "ports": ports})
+
+
 async def async_setup_entry(hass, entry, async_add_entities):
     coordinator = hass.data[DOMAIN][entry.entry_id]
     entities = [
@@ -50,7 +64,10 @@ class IcxPoeSwitch(IcxEntity, SwitchEntity):
             raise HomeAssistantError(
                 f"Failed to change PoE for {self._label}: {exc}"
             ) from exc
-        await self.coordinator.async_request_refresh()
+        _apply_accepted_command(
+            self.coordinator, self.port_index,
+            poe_mode=POE_ENABLED if enabled else POE_DISABLED,
+        )
 
     async def async_turn_on(self, **kwargs) -> None:
         await self._set_poe(True)
@@ -82,7 +99,7 @@ class IcxAdminSwitch(IcxEntity, SwitchEntity):
             raise HomeAssistantError(
                 f"Cannot change Ethernet state for {self._label}: {exc}"
             ) from exc
-        await self.coordinator.async_request_refresh()
+        _apply_accepted_command(self.coordinator, self.port_index, admin_on=enabled)
 
     async def async_turn_on(self, **kwargs) -> None:
         await self._set_admin(True)

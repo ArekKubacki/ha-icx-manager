@@ -2,7 +2,7 @@
 
 Lokalna integracja **Brocade / Ruckus ICX** dla Home Assistant, opracowana początkowo dla **ICX6450-48P**, korzystająca z **SNMPv3**.
 
-> **v0.2.1 — wersja testowa**. Kod sprawdzony pod kątem składni i testów funkcji pomocniczych. Wymaga jeszcze testów na fizycznym switchu przed normalnym użytkowaniem.
+> **v0.2.2 — wersja testowa**. Kod sprawdzony pod kątem składni i testów funkcji pomocniczych. Wymaga jeszcze testów na fizycznym switchu przed normalnym użytkowaniem.
 
 ## Funkcje
 
@@ -113,3 +113,7 @@ port_names:
   1/1/1: AP parter
   1/1/2: Kamera podjazd
 ```
+
+## Szybsze przełączanie PoE i Ethernetu (v0.2.2)
+
+Po udanym SNMP SET integracja publikuje stan poleconej zmiany natychmiast w encji, bez uruchamiania pełnego odczytu 16 tabel SNMP. Kolejny cykliczny odczyt weryfikuje rzeczywisty stan przełącznika. Pozwala to szybciej uaktualnić kartę; sam czas odpowiedzi SNMP i przełączenia sprzętowego pozostaje zależny od switcha.
