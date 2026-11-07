@@ -1,9 +1,10 @@
-/* ICX Manager card v0.2.1 — dependency-free Lovelace custom element. */
+/* ICX Manager card v0.2.3 — dependency-free Lovelace custom element. */
 class IcxManagerCard extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
     this._selected = null;
+    this._viewMode = "detailed";
     this._pending = new Map();
     this._error = "";
     this._scheduled = false;
@@ -16,7 +17,11 @@ class IcxManagerCard extends HTMLElement {
     if (!config || typeof config !== "object") {
       throw new Error("ICX Manager: card config must be an object");
     }
-    this._config = { ...config };
+    const next = { ...config };
+    if (!this._config || this._config.view !== next.view) {
+      this._viewMode = next.view === "compact" ? "compact" : "detailed";
+    }
+    this._config = next;
     this._schedule();
   }
 
@@ -85,9 +90,20 @@ class IcxManagerCard extends HTMLElement {
     return this._escape(entity.state) + suffix;
   }
 
+  _switchText(entity, yes, no) {
+    if (entity?.state === "on") return yes;
+    if (entity?.state === "off") return no;
+    return "—";
+  }
+
   _click(event) {
     const button = event.target.closest("button");
     if (!button || button.disabled) return;
+    if (button.hasAttribute("data-view-toggle")) {
+      this._viewMode = this._viewMode === "compact" ? "detailed" : "compact";
+      this._schedule();
+      return;
+    }
     const select = button.getAttribute("data-select");
     if (select !== null) {
       this._selected = select;
@@ -191,19 +207,21 @@ class IcxManagerCard extends HTMLElement {
     if (current) {
       const description = this._displayName(this._selected, current);
       const metrics = [
-        ["Link", this._value(current.link)],
-        ["Prędkość łącza", this._value(current.speed, " Mbit/s")],
-        ["RX", this._value(current.rx_mbps, " Mbit/s")],
-        ["TX", this._value(current.tx_mbps, " Mbit/s")],
-        ["Wykorzystanie RX", this._value(current.rx_utilization, " %")],
-        ["Wykorzystanie TX", this._value(current.tx_utilization, " %")],
-        ["PoE", this._value(current.poe)],
-        ["Moc PoE", this._value(current.poe_watts, " W")],
-        ["Błędy RX/TX", this._value(current.rx_errors) + " / " + this._value(current.tx_errors)],
-        ["Odrzucone RX/TX", this._value(current.rx_discards) + " / " + this._value(current.tx_discards)]
+        ["mdi:lan-connect", "Link", this._switchText(current.link, "Aktywny", "Nieaktywny"), false],
+        ["mdi:speedometer", "Prędkość łącza", this._value(current.speed, " Mbit/s"), false],
+        ["mdi:download", "RX", this._value(current.rx_mbps, " Mbit/s"), false],
+        ["mdi:upload", "TX", this._value(current.tx_mbps, " Mbit/s"), false],
+        ["mdi:chart-line", "Wykorzystanie RX", this._value(current.rx_utilization, " %"), true],
+        ["mdi:chart-line", "Wykorzystanie TX", this._value(current.tx_utilization, " %"), true],
+        ["mdi:flash", "PoE", this._switchText(current.poe, "Włączone", "Wyłączone"), false],
+        ["mdi:power-plug", "Moc PoE", this._value(current.poe_watts, " W"), false],
+        ["mdi:alert-circle-outline", "Błędy RX/TX", this._value(current.rx_errors) + " / " + this._value(current.tx_errors), true],
+        ["mdi:delete-off-outline", "Odrzucone RX/TX", this._value(current.rx_discards) + " / " + this._value(current.tx_discards), true]
       ];
-      const rows = metrics.map(([label, value]) =>
-        '<div class="metric"><span>' + this._escape(label) + '</span><strong>' +
+      const rows = metrics.map(([icon, label, value, extra]) =>
+        '<div class="metric' + (extra ? ' extra' : '') + '">' +
+        '<ha-icon icon="' + icon + '" aria-hidden="true"></ha-icon>' +
+        '<span class="metric-label">' + this._escape(label) + '</span><strong>' +
         value + '</strong></div>').join("");
       const controls = [];
       for (const [metric, caption, danger] of [
@@ -219,13 +237,20 @@ class IcxManagerCard extends HTMLElement {
         controls.push('<button class="toggle ' + (good ? "on" : "") +
           (danger ? " caution" : "") + '" data-action="' + metric +
           '" data-entity="' + this._escape(entity.entity_id) +
-          '"' + (valid ? "" : " disabled") + '>' +
-          this._escape(caption) + ': ' + (pending ? "Zmieniam… " : "") +
-          (good ? "ON" : state === "off" ? "OFF" : "—") +
-          '</button>');
+          '" aria-label="' + this._escape(caption) + '"' +
+          (valid ? "" : " disabled") + '>' +
+          '<ha-icon icon="' + (danger ? "mdi:lan" : "mdi:flash") + '" aria-hidden="true"></ha-icon>' +
+          '<span class="toggle-text">' + this._escape(caption) + '</span>' +
+          '<span class="toggle-state">' + (pending ? "Zmieniam…" :
+          (good ? "ON" : state === "off" ? "OFF" : "—")) + '</span></button>');
       }
+      const portStatus = current.admin?.state === "off" ? "Wyłączony" :
+        current.link?.state === "on" ? "Aktywny" : "Brak linku";
+      const statusClass = current.admin?.state === "off" ? "disabled" :
+        current.link?.state === "on" ? "up" : "down";
       detail = '<div class="detail-title"><div><h3>Port ' + this._escape(this._selected) +
-        '</h3><div class="description">' + this._escape(description) + '</div></div></div>' +
+        '</h3><div class="description">' + this._escape(description) + '</div></div>' +
+        '<span class="port-status ' + statusClass + '">' + portStatus + '</span></div>' +
         '<div class="metrics">' + rows + '</div>' +
         '<div class="controls">' + controls.join("") + '</div>';
     }
@@ -264,16 +289,29 @@ class IcxManagerCard extends HTMLElement {
       '.warning{color:var(--error-color)}.empty{padding:15px}' +
       '@media(max-width:640px){.grid{grid-template-columns:repeat(' +
       mobile + ',minmax(0,1fr))}.metrics{grid-template-columns:1fr}}' +
-      '</style><ha-card><div class="heading"><div><h2>' + title +
+      "ha-icon{--mdc-icon-size:18px;flex-shrink:0}ha-card{padding:20px}.heading{flex-wrap:wrap;align-items:center;margin-bottom:17px}.power{padding:9px 13px;border:1px solid var(--divider-color);border-radius:12px;background:var(--card-background-color);font-size:23px}.view-switch{margin-left:auto;display:inline-flex;align-items:center;gap:6px;min-height:37px;padding:7px 10px;cursor:pointer;border:1px solid var(--divider-color);border-radius:10px;background:var(--card-background-color);color:var(--primary-text-color);font:inherit;font-size:12px}.view-switch:hover,.view-switch:focus-visible{border-color:var(--primary-color)}.view-switch ha-icon{--mdc-icon-size:16px}.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-bottom:18px}.badge{display:flex;align-items:center;gap:9px;min-width:0;padding:10px 12px;border-radius:12px;border:1px solid var(--divider-color);background:var(--card-background-color);font-size:12px}.badge>span{display:grid;gap:3px;min-width:0}.badge small{font-size:11px;color:var(--secondary-text-color)}.badge strong{font-size:18px;line-height:1.15;font-weight:700;font-variant-numeric:tabular-nums}.badge ha-icon{color:var(--primary-color);--mdc-icon-size:19px}.badge.link ha-icon{color:#32865e}.badge.poe ha-icon{color:#d18a25}.grid{gap:7px}.port{border-radius:9px;transition:transform .15s,box-shadow .15s}.port:hover{transform:translateY(-1px);box-shadow:0 2px 9px rgba(0,0,0,.12)}.port:focus-visible{outline:3px solid var(--primary-color);outline-offset:2px}.legend{display:flex;flex-wrap:wrap;align-items:center;gap:13px;opacity:1;color:var(--secondary-text-color);margin:13px 0 17px}.legend>span{display:inline-flex;align-items:center;gap:6px}.dot{width:9px;height:9px;border-radius:50%;display:inline-block;background:var(--divider-color)}.dot.up{background:#248458}.dot.off{background:#b34a4a}.dot.poe{background:#d68a23}.details{background:var(--card-background-color);border:1px solid var(--divider-color);border-radius:15px;padding:17px 18px;box-shadow:0 3px 12px rgba(0,0,0,.025)}.detail-title{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}.description{margin:4px 0 0;color:var(--secondary-text-color);opacity:1}.port-status{border:1px solid var(--divider-color);border-radius:20px;padding:5px 9px;font-size:11px;white-space:nowrap;color:var(--secondary-text-color)}.port-status.up{color:#248458;border-color:#248458}.port-status.disabled{color:#b34a4a;border-color:#b34a4a}.metrics{gap:0 20px}.metric{display:grid;grid-template-columns:18px minmax(0,1fr) auto;align-items:center;gap:8px;padding:10px 0}.metric ha-icon{--mdc-icon-size:17px;color:var(--secondary-text-color)}.metric-label{min-width:0;color:var(--secondary-text-color)}.metric strong{font-variant-numeric:tabular-nums;font-weight:650;font-size:12px}.controls{margin-top:17px;gap:9px}.toggle{display:inline-flex;align-items:center;gap:9px;min-height:41px;padding:9px 11px;border-radius:10px;font:inherit;font-size:12px;font-weight:600}.toggle ha-icon{--mdc-icon-size:17px;color:#d18a25}.toggle.caution ha-icon{color:#b34a4a}.toggle-state{padding:3px 7px;border-radius:999px;background:var(--secondary-background-color);color:var(--secondary-text-color)}.toggle.on:not(.caution) .toggle-state{color:#248458}.toggle.on.caution .toggle-state{color:#b34a4a}.toggle:disabled{cursor:wait}.compact .metric.extra{display:none}.compact .metric{padding:7px 0}.compact .details{padding:12px 15px}.compact .detail-title{margin-bottom:6px}@media(max-width:640px){ha-card{padding:14px}.stats{gap:6px}.badge{padding:8px 6px;gap:5px}.badge ha-icon{--mdc-icon-size:16px}.badge strong{font-size:16px}.badge small{font-size:10px}.heading{align-items:flex-start}.view-switch{margin-left:0}.details{padding:12px}}" +
+      '</style><ha-card class="' + (this._viewMode === "compact" ? "compact" : "detailed") +
+      '"><div class="heading"><div><h2>' + title +
       '</h2><div class="subtitle">' + subtitle + '</div></div><div class="power">' +
       this._value(power, " W") + '<small>Łącznie PoE' + (partial ? " (częściowo)" : "") +
-      '</small></div></div><div class="stats">' +
-      '<span class="badge">Porty: ' + labels.length + '</span>' +
-      '<span class="badge">Link UP: ' + activeCount + '</span>' +
-      '<span class="badge">PoE ON: ' + poeCount + '</span></div>' +
+      '</small></div><button type="button" class="view-switch" data-view-toggle ' +
+      'aria-label="Zmień tryb widoku" aria-pressed="' +
+      (this._viewMode === "compact" ? "true" : "false") + '">' +
+      '<ha-icon icon="mdi:view-dashboard-outline" aria-hidden="true"></ha-icon>' +
+      (this._viewMode === "compact" ? "Szczegóły" : "Kompaktowy") +
+      '</button></div><div class="stats">' +
+      '<span class="badge"><ha-icon icon="mdi:ethernet-switch" aria-hidden="true"></ha-icon>' +
+      '<span><small>Porty</small><strong>' + labels.length + '</strong></span></span>' +
+      '<span class="badge link"><ha-icon icon="mdi:lan-connect" aria-hidden="true"></ha-icon>' +
+      '<span><small>Link UP</small><strong>' + activeCount + '</strong></span></span>' +
+      '<span class="badge poe"><ha-icon icon="mdi:flash" aria-hidden="true"></ha-icon>' +
+      '<span><small>PoE ON</small><strong>' + poeCount + '</strong></span></span></div>' +
       info + (this._error ? '<p class="warning">' + this._escape(this._error) + '</p>' : '') +
       '<div class="grid">' + cells + '</div>' +
-      '<div class="legend">🟩 aktywny · 🟥 administracyjnie wyłączony · ⚡ PoE</div>' +
+      '<div class="legend">' +
+      '<span><i class="dot up"></i>Aktywny</span>' +
+      '<span><i class="dot off"></i>Ethernet OFF</span>' +
+      '<span><i class="dot poe"></i>PoE ON</span></div>' +
       '<div class="details">' + detail + '</div></ha-card>';
   }
 }
@@ -369,6 +407,9 @@ class IcxManagerCardEditor extends HTMLElement {
     } else if (field === "port") {
       this._port = e.target.value;
       this._render();
+    } else if (field === "view") {
+      this._config.view = e.target.value === "compact" ? "compact" : "detailed";
+      this._emit(); this._render();
     }
   }
   _render() {
@@ -398,7 +439,11 @@ class IcxManagerCardEditor extends HTMLElement {
       this._esc(this._config.title ?? "ICX Manager") + '"></label>' +
       '<label>Switch<select data-field="device">' +
       (options(devices.map(([id]) => [id,id]), device) || '<option>Brak switchy</option>') +
-      '</select></label><fieldset><legend>Układ i szerokość</legend><div class="two">' +
+      '</select></label><fieldset><legend>Układ i szerokość</legend>' +
+      '<label>Widok domyślny<select data-field="view">' +
+      options([["detailed","Szczegółowy"],["compact","Kompaktowy"]],
+        this._config.view === "compact" ? "compact" : "detailed") +
+      '</select></label><div class="two">' +
       number('Portów w rzędzie', 'columns', 12, 1, 24) +
       number('Portów w rzędzie na telefonie', 'mobile_columns', 6, 1, 12) +
       number('Wysokość portu (px)', 'port_height', 40, 28, 90) +

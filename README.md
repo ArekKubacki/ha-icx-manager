@@ -2,7 +2,7 @@
 
 Lokalna integracja **Brocade / Ruckus ICX** dla Home Assistant, opracowana początkowo dla **ICX6450-48P**, korzystająca z **SNMPv3**.
 
-> **v0.2.2 — wersja testowa**. Kod sprawdzony pod kątem składni i testów funkcji pomocniczych. Wymaga jeszcze testów na fizycznym switchu przed normalnym użytkowaniem.
+> **v0.2.3 — wersja testowa**. Kod sprawdzony pod kątem składni i testów funkcji pomocniczych. Wymaga jeszcze testów na fizycznym switchu przed normalnym użytkowaniem.
 
 ## Funkcje
 
@@ -117,3 +117,20 @@ port_names:
 ## Szybsze przełączanie PoE i Ethernetu (v0.2.2)
 
 Po udanym SNMP SET integracja publikuje stan poleconej zmiany natychmiast w encji, bez uruchamiania pełnego odczytu 16 tabel SNMP. Kolejny cykliczny odczyt weryfikuje rzeczywisty stan przełącznika. Pozwala to szybciej uaktualnić kartę; sam czas odpowiedzi SNMP i przełączenia sprzętowego pozostaje zależny od switcha.
+
+
+## Odświeżony wygląd (v0.2.3)
+
+Karta otrzymała subtelne panele zamiast ciężkiego szarego tła, nowe podsumowanie z ikonami, ikony przy metrykach, czytelniejsze przełączniki oraz nową legendę.
+
+Widok **Szczegółowy** wyświetla komplet metryk portu. Widok **Kompaktowy** pokazuje Link, prędkość, RX/TX, PoE i moc — ukrywa procenty wykorzystania, błędy i odrzucone pakiety. Oba zachowują przyciski sterowania PoE i administracyjne ON/OFF portu.
+
+Przełączysz widok przyciskiem na karcie (tymczasowo) lub ustawisz widok domyślny w edytorze wizualnym / YAML:
+
+```yaml
+type: custom:icx-manager-card
+title: ICX6450
+view: compact  # albo detailed
+```
+
+Jeżeli po aktualizacji karta nadal wygląda jak wcześniej, wyczyść cache (Ctrl+Shift+R), a po aktualizacji HACS uruchom ponownie Home Assistant.
