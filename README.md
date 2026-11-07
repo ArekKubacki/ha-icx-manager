@@ -2,7 +2,7 @@
 
 Lokalna integracja **Brocade / Ruckus ICX** dla Home Assistant, opracowana początkowo dla **ICX6450-48P**, korzystająca z **SNMPv3**.
 
-> **v0.2.3 — wersja testowa**. Kod sprawdzony pod kątem składni i testów funkcji pomocniczych. Wymaga jeszcze testów na fizycznym switchu przed normalnym użytkowaniem.
+> **v0.2.4 — wersja testowa**. Kod sprawdzony pod kątem składni i testów funkcji pomocniczych. Wymaga jeszcze testów na fizycznym switchu przed normalnym użytkowaniem.
 
 ## Funkcje
 
@@ -125,7 +125,7 @@ Karta otrzymała subtelne panele zamiast ciężkiego szarego tła, nowe podsumow
 
 Widok **Szczegółowy** wyświetla komplet metryk portu. Widok **Kompaktowy** pokazuje Link, prędkość, RX/TX, PoE i moc — ukrywa procenty wykorzystania, błędy i odrzucone pakiety. Oba zachowują przyciski sterowania PoE i administracyjne ON/OFF portu.
 
-Przełączysz widok przyciskiem na karcie (tymczasowo) lub ustawisz widok domyślny w edytorze wizualnym / YAML:
+Tryb wyświetlania ustawisz **wyłącznie w ustawieniach karty** (edytor wizualny lub YAML). Na samej karcie nie ma przycisku przełączania:
 
 ```yaml
 type: custom:icx-manager-card
@@ -134,3 +134,11 @@ view: compact  # albo detailed
 ```
 
 Jeżeli po aktualizacji karta nadal wygląda jak wcześniej, wyczyść cache (Ctrl+Shift+R), a po aktualizacji HACS uruchom ponownie Home Assistant.
+
+
+## Poprawki układu (v0.2.4)
+
+- Widok Pełny lub Kompaktowy wybiera się tylko w **Edytuj kartę → Układ i szerokość → Tryb wyświetlania**. Brak przełącznika w treści karty.
+- W podsumowaniu Porty używana jest ikona `mdi:ethernet` (zastępuje poprzednią ikonę).
+- Liczby portów, aktywnych łączy i portów PoE są na **tej samej linii, bezpośrednio obok ikon**. Opisy znajdują się za liczbami.
+- YAML pozostaje kompatybilny: `view: compact` lub `view: detailed`.
