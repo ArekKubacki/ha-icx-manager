@@ -1,4 +1,4 @@
-/* ICX Manager card v0.2.4 — dependency-free Lovelace custom element. */
+/* ICX Manager card v0.2.5 — dependency-free Lovelace custom element. */
 class IcxManagerCard extends HTMLElement {
   constructor() {
     super();

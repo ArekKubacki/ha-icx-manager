@@ -2,7 +2,7 @@
 
 Lokalna integracja **Brocade / Ruckus ICX** dla Home Assistant, opracowana początkowo dla **ICX6450-48P**, korzystająca z **SNMPv3**.
 
-> **v0.2.4 — wersja testowa**. Kod sprawdzony pod kątem składni i testów funkcji pomocniczych. Wymaga jeszcze testów na fizycznym switchu przed normalnym użytkowaniem.
+> **v0.2.5 — wersja testowa**. Kod sprawdzony pod kątem składni i testów funkcji pomocniczych. Wymaga jeszcze testów na fizycznym switchu przed normalnym użytkowaniem.
 
 ## Funkcje
 
@@ -142,3 +142,10 @@ Jeżeli po aktualizacji karta nadal wygląda jak wcześniej, wyczyść cache (Ct
 - W podsumowaniu Porty używana jest ikona `mdi:ethernet` (zastępuje poprzednią ikonę).
 - Liczby portów, aktywnych łączy i portów PoE są na **tej samej linii, bezpośrednio obok ikon**. Opisy znajdują się za liczbami.
 - YAML pozostaje kompatybilny: `view: compact` lub `view: detailed`.
+
+
+## Automatyczna aktualizacja zasobu karty (v0.2.5)
+
+Po aktualizacji i restarcie HA integracja w trybie **Lovelace Resources: storage** tworzy lub aktualizuje istniejący zasób `/icx-manager/icx-manager-card.js?v=0.2.5` automatycznie, na podstawie wersji manifestu. Nie trzeba ręcznie zwiększać cyferek w ustawieniach Zasoby. Modyfikowany jest tylko własny adres zasobu ICX Manager, inne karty pozostają nietknięte. W trybie YAML zarządzanie zasobami pozostaje ręczne.
+
+Odświeżenie strony lub aplikacji może być nadal wymagane, jeśli interfejs przechowuje starszy kod w pamięci podręcznej.
