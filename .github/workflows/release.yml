@@ -34,14 +34,14 @@ jobs:
                   body: [
                     'ICX Manager ' + tag,
                     '',
-                    '- Compact/full display modes selected only in card settings.',
-                    '- Updated icon and inline counts in Porty / Link UP / PoE ON.',
-                    '- Versioned Lovelace resource URL managed automatically in storage mode.',
-                    '- Existing PoE and port controls unchanged.',
+                    '- Per-port Ethernet shutdown permission configured in the card editor.',
+                    '- Global card shutdown lock overrides per-port permissions.',
+                    '- Ethernet ports can still be re-enabled and PoE remains independent.',
+                    '- Default card shutdown permission is denied until explicitly enabled.',
                     '',
                     'Install or update from HACS, then restart Home Assistant.'
                   ].join('\n'),
-                  draft: false, prerelease: true, generate_release_notes: true
+                  draft: false, prerelease: false, generate_release_notes: true
                 });
                 core.info('Published ' + tag);
               }

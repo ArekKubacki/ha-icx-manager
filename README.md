@@ -2,7 +2,7 @@
 
 Lokalna integracja **Brocade / Ruckus ICX** dla Home Assistant, opracowana początkowo dla **ICX6450-48P**, korzystająca z **SNMPv3**.
 
-> **v0.2.6 — wersja testowa**. Kod sprawdzony pod kątem składni i testów funkcji pomocniczych. Wymaga jeszcze testów na fizycznym switchu przed normalnym użytkowaniem.
+> **v0.2.7 — wersja testowa**. Kod sprawdzony pod kątem składni i testów funkcji pomocniczych. Wymaga jeszcze testów na fizycznym switchu przed normalnym użytkowaniem.
 
 ## Funkcje
 
@@ -158,3 +158,20 @@ W szczegółach portu są teraz **dwa przyciski obok siebie**: „Zasilanie PoE�
 Sterowanie Ethernet wymaga włączenia **Ustawienia → Urządzenia i usługi → ICX Manager → Konfiguruj (Opcje) → Sterowanie portami Ethernet** oraz użytkownika SNMPv3 z uprawnieniem SET do ifAdminStatus. Gdy nie jest włączone, przycisk jest widoczny, ale nieaktywny, z informacją jak go uruchomić. Porty bez PoE mają nieaktywny przycisk PoE.
 
 **Uwaga:** nie wyłączaj portu uplinkowego ani portu, którym komunikują się ze switchem Home Assistant lub router. Potwierdzenie w karcie nie zabezpiecza przed użyciem usług HA i innych interfejsów.
+
+## Uprawnienia wyłączania portów w karcie (v0.2.7)
+
+W edytorze wizualnym, w sekcji **Nazwy i uprawnienia portów**, przy wybranym porcie znajduje się opcja **Zezwalaj na wyłączenie tego portu z poziomu karty**. Domyślnie dla każdego portu wyłączanie Ethernet z tej karty jest **zablokowane**. Konfigurację można też ustawić w YAML:
+
+```yaml
+type: custom:icx-manager-card
+port_shutdown_allowed:
+  "1/1/7": true
+block_all_port_shutdown: false
+```
+
+Opcja **Zablokuj wyłączanie wszystkich portów z tej karty**, w sekcji **Bezpieczeństwo portów**, ma pierwszeństwo nad indywidualnymi zezwoleniami. Nie usuwa ich: po wyłączeniu blokady globalnej wcześniej zaznaczone porty znów można wyłączać.
+
+Ograniczenia nie blokują **włączania** portów wyłączonych administracyjnie i nie dotyczą sterowania **PoE**. Zabezpieczenie działa wyłącznie w tej karcie Lovelace — inne karty, automatyzacje i bezpośrednie SNMP SET mogą nadal wyłączać porty, jeśli użytkownik posiada stosowne uprawnienia. Aby przyciski sterowania Ethernet były dostępne, włącz również tę funkcję w **Opcjach integracji**.
+
+Wydanie `v0.2.7` jest publikowane jako zwykły (nie pre-release) GitHub Release, aby HACS mógł wykorzystywać numerowaną wersję.

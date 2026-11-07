@@ -13,3 +13,5 @@ jobs:
       - run: python -m pip install pytest
       - run: python -m compileall -q custom_components/icx_manager
       - run: python -m pytest -q tests
+      - name: Test Lovelace port permissions
+        run: node tests/test_card.cjs

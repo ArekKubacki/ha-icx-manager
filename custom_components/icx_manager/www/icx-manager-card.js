@@ -1,4 +1,4 @@
-/* ICX Manager card v0.2.6 — dependency-free Lovelace custom element. */
+/* ICX Manager card v0.2.7 — dependency-free Lovelace custom element. */
 class IcxManagerCard extends HTMLElement {
   constructor() {
     super();
@@ -91,6 +91,11 @@ class IcxManagerCard extends HTMLElement {
     return "—";
   }
 
+  _canShutdownPort(label) {
+    return this._config?.block_all_port_shutdown !== true &&
+      this._config?.port_shutdown_allowed?.[label] === true;
+  }
+
   _click(event) {
     const button = event.target.closest("button");
     if (!button || button.disabled) return;
@@ -106,6 +111,12 @@ class IcxManagerCard extends HTMLElement {
     const stateObj = this._hass.states[entityId];
     if (!stateObj || !["on", "off"].includes(stateObj.state) || this._pending.has(entityId)) return;
     const target = stateObj.state === "on" ? "turn_off" : "turn_on";
+    if (action === "admin" && target === "turn_off" &&
+        !this._canShutdownPort(this._selected)) {
+      this._error = "Wyłączanie portu jest zablokowane w ustawieniach karty.";
+      this._schedule();
+      return;
+    }
     if (action === "admin") {
       const verb = target === "turn_off" ? "WYŁĄCZYSZ" : "WŁĄCZYSZ";
       const warning = "Uwaga: " + verb + " port Ethernet " + (this._selected || "") +
@@ -220,7 +231,10 @@ class IcxManagerCard extends HTMLElement {
         const pending = entity ? this._pending.get(entity.entity_id) : null;
         const state = pending ? pending.desired : entity?.state;
         const good = state === "on";
-        const valid = !!entity && !pending && ["on", "off"].includes(entity.state);
+        const shutdownBlocked = danger && entity?.state === "on" &&
+          !this._canShutdownPort(this._selected);
+        const valid = !!entity && !pending && ["on", "off"].includes(entity.state) &&
+          !shutdownBlocked;
         const caption = danger
           ? (state === "off" ? "Włącz port" : "Wyłącz port")
           : "Zasilanie PoE";
@@ -231,12 +245,15 @@ class IcxManagerCard extends HTMLElement {
         const icon = danger ? (good ? "mdi:lan-disconnect" : "mdi:lan-connect") : "mdi:flash";
         const reason = !entity && danger
           ? "Sterowanie Ethernet włączysz w Opcjach integracji ICX Manager"
-          : !entity ? "Ten port nie ma encji PoE" : "";
+          : !entity ? "Ten port nie ma encji PoE"
+          : shutdownBlocked ? (this._config.block_all_port_shutdown
+            ? "Globalna blokada wyłączania wszystkich portów w ustawieniach karty"
+            : "Wyłączanie tego portu zablokowano w ustawieniach karty") : "";
         controls.push('<button type="button" class="toggle ' + (good ? "on " : "") +
           (danger ? "caution ethernet" : "poe") +
           '" data-action="' + metric + '"' +
           (entity ? ' data-entity="' + this._escape(entity.entity_id) + '"' : '') +
-          ' aria-label="' + this._escape(caption + " — " + stateLabel) + '"' +
+          ' aria-label="' + this._escape(caption + " — " + stateLabel + (reason ? ". " + reason : "")) + '"' +
           (reason ? ' title="' + this._escape(reason) + '"' : '') +
           (valid ? '' : ' disabled') + '>' +
           '<ha-icon icon="' + icon + '" aria-hidden="true"></ha-icon>' +
@@ -245,7 +262,11 @@ class IcxManagerCard extends HTMLElement {
       }
       const controlHint = !current.admin
         ? '<div class="controls-note">Wyłączanie portu: włącz sterowanie portami Ethernet w Opcjach integracji ICX Manager.</div>'
-        : '';
+        : this._config.block_all_port_shutdown
+          ? '<div class="controls-note">Globalna blokada wyłączania portów jest aktywna. Włączanie wyłączonych portów pozostaje dostępne.</div>'
+          : !this._canShutdownPort(this._selected)
+            ? '<div class="controls-note">Wyłączanie tego portu jest zablokowane w ustawieniach karty.</div>'
+            : '';
       const portStatus = current.admin?.state === "off" ? "Wyłączony" :
         current.link?.state === "on" ? "Aktywny" : "Brak linku";
       const statusClass = current.admin?.state === "off" ? "disabled" :
@@ -336,7 +357,8 @@ class IcxManagerCardEditor extends HTMLElement {
     this.shadowRoot.addEventListener("change", (e) => this._change(e));
   }
   setConfig(config) {
-    const next = { ...config, port_names: { ...(config.port_names || {}) } };
+    const next = { ...config, port_names: { ...(config.port_names || {}) },
+      port_shutdown_allowed: { ...(config.port_shutdown_allowed || {}) } };
     const changed = JSON.stringify(this._config) !== JSON.stringify(next);
     this._config = next;
     if (changed && !this.shadowRoot.activeElement?.matches("input")) this._render();
@@ -372,7 +394,9 @@ class IcxManagerCardEditor extends HTMLElement {
   }
   _emit() {
     this.dispatchEvent(new CustomEvent("config-changed", {
-      detail: { config: { ...this._config, port_names: { ...this._config.port_names } } },
+      detail: { config: { ...this._config,
+        port_names: { ...this._config.port_names },
+        port_shutdown_allowed: { ...this._config.port_shutdown_allowed } } },
       bubbles: true, composed: true
     }));
   }
@@ -407,6 +431,13 @@ class IcxManagerCardEditor extends HTMLElement {
     } else if (field === "view") {
       this._config.view = e.target.value === "compact" ? "compact" : "detailed";
       this._emit(); this._render();
+    } else if (field === "block_all_port_shutdown") {
+      this._config.block_all_port_shutdown = e.target.checked;
+      this._emit(); this._render();
+    } else if (field === "port_shutdown_allowed" && this._port) {
+      if (e.target.checked) this._config.port_shutdown_allowed[this._port] = true;
+      else delete this._config.port_shutdown_allowed[this._port];
+      this._emit();
     }
   }
   _render() {
@@ -431,6 +462,9 @@ class IcxManagerCardEditor extends HTMLElement {
       'color:var(--primary-text-color);font:inherit}fieldset{border:1px solid var(--divider-color);' +
       'border-radius:10px;padding:12px}legend{font-weight:600}.two{display:grid;' +
       'grid-template-columns:1fr 1fr;gap:10px}.hint{font-size:12px;opacity:.7;margin-top:8px}' +
+      '.checkline{display:flex;flex-direction:row;align-items:center;gap:10px;cursor:pointer}' +
+      '.checkline input[type=checkbox]{width:18px;height:18px;flex:0 0 18px;margin:0;accent-color:var(--primary-color)}' +
+      '.checkline span{min-width:0}.checkline:has(input:disabled){opacity:.6;cursor:not-allowed}' +
       '</style><div class="settings">' +
       '<label>Tytuł<input data-field="title" value="' +
       this._esc(this._config.title ?? "ICX Manager") + '"></label>' +
@@ -446,15 +480,27 @@ class IcxManagerCardEditor extends HTMLElement {
       number('Wysokość portu (px)', 'port_height', 40, 28, 90) +
       number('Max szerokość karty (0 = auto)', 'max_width', 0, 0, 2400) +
       '</div><div class="hint">W widoku Sekcje możesz też przeciągnąć uchwyt szerokości karty.</div>' +
-      '</fieldset><fieldset><legend>Nazwy portów</legend>' +
+      '</fieldset><fieldset><legend>Bezpieczeństwo portów</legend>' +
+      '<label class="checkline"><input type="checkbox" data-field="block_all_port_shutdown"' +
+      (this._config.block_all_port_shutdown ? ' checked' : '') +
+      '><span>Zablokuj wyłączanie wszystkich portów z tej karty</span></label>' +
+      '<div class="hint">Blokada globalna jest nadrzędna wobec ustawień poszczególnych portów; ' +
+      'nie ogranicza włączania wyłączonych portów ani PoE.</div></fieldset>' +
+      '<fieldset><legend>Nazwy i uprawnienia portów</legend>' +
       '<label>Wybierz port<select data-field="port">' +
       (options(ports.map(p => [p.label, p.label + (p.alias ? ' — ' + p.alias : '')]), this._port) ||
        '<option>Brak portów</option>') + '</select></label>' +
       '<label>Twoja nazwa<input data-field="port_name" maxlength="80" ' +
       'value="' + this._esc(this._config.port_names?.[this._port] ?? "") +
       '" placeholder="np. Kamera podjazd"></label>' +
-      '<div class="hint">Nazwa dotyczy tej karty i nie zmienia konfiguracji switcha. ' +
-      'Puste pole: opis SNMP lub numer portu.</div></fieldset></div>';
+      '<label class="checkline"><input type="checkbox" data-field="port_shutdown_allowed"' +
+      (this._config.port_shutdown_allowed?.[this._port] === true ? ' checked' : '') +
+      (this._config.block_all_port_shutdown || !this._port ? ' disabled' : '') +
+      '><span>Zezwalaj na wyłączenie tego portu z poziomu karty</span></label>' +
+      '<div class="hint">Domyślnie wyłączanie wszystkich portów z karty jest zablokowane. ' +
+      'Globalna blokada ma pierwszeństwo; PoE działa niezależnie.</div>' +
+      '<div class="hint">Nazwa nie zmienia konfiguracji switcha. Puste pole: opis SNMP lub numer portu.</div>' +
+      '</fieldset></div>';
   }
 }
 if (!customElements.get("icx-manager-card-editor")) {
