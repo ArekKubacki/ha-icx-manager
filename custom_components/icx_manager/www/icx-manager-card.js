@@ -1,4 +1,4 @@
-/* ICX Manager card v0.2.5 — dependency-free Lovelace custom element. */
+/* ICX Manager card v0.2.6 — dependency-free Lovelace custom element. */
 class IcxManagerCard extends HTMLElement {
   constructor() {
     super();
@@ -213,27 +213,39 @@ class IcxManagerCard extends HTMLElement {
         '<ha-icon icon="' + icon + '" aria-hidden="true"></ha-icon>' +
         '<span class="metric-label">' + this._escape(label) + '</span><strong>' +
         value + '</strong></div>').join("");
+      // Keep both controls side by side, even when SNMP admin writes are disabled.
       const controls = [];
-      for (const [metric, caption, danger] of [
-        ["poe", "Zasilanie PoE", false],
-        ["admin", "Port Ethernet", true]
-      ]) {
+      for (const [metric, danger] of [["poe", false], ["admin", true]]) {
         const entity = current[metric];
-        if (!entity) continue;
-        const pending = this._pending.get(entity.entity_id);
-        const state = pending ? pending.desired : entity.state;
+        const pending = entity ? this._pending.get(entity.entity_id) : null;
+        const state = pending ? pending.desired : entity?.state;
         const good = state === "on";
-        const valid = !pending && ["on", "off"].includes(entity.state);
-        controls.push('<button class="toggle ' + (good ? "on" : "") +
-          (danger ? " caution" : "") + '" data-action="' + metric +
-          '" data-entity="' + this._escape(entity.entity_id) +
-          '" aria-label="' + this._escape(caption) + '"' +
-          (valid ? "" : " disabled") + '>' +
-          '<ha-icon icon="' + (danger ? "mdi:lan" : "mdi:flash") + '" aria-hidden="true"></ha-icon>' +
+        const valid = !!entity && !pending && ["on", "off"].includes(entity.state);
+        const caption = danger
+          ? (state === "off" ? "Włącz port" : "Wyłącz port")
+          : "Zasilanie PoE";
+        const stateLabel = !entity ? (danger ? "Zablokowane" : "Brak PoE")
+          : pending ? "Zmieniam…"
+          : good ? "ON"
+          : state === "off" ? "OFF" : "—";
+        const icon = danger ? (good ? "mdi:lan-disconnect" : "mdi:lan-connect") : "mdi:flash";
+        const reason = !entity && danger
+          ? "Sterowanie Ethernet włączysz w Opcjach integracji ICX Manager"
+          : !entity ? "Ten port nie ma encji PoE" : "";
+        controls.push('<button type="button" class="toggle ' + (good ? "on " : "") +
+          (danger ? "caution ethernet" : "poe") +
+          '" data-action="' + metric + '"' +
+          (entity ? ' data-entity="' + this._escape(entity.entity_id) + '"' : '') +
+          ' aria-label="' + this._escape(caption + " — " + stateLabel) + '"' +
+          (reason ? ' title="' + this._escape(reason) + '"' : '') +
+          (valid ? '' : ' disabled') + '>' +
+          '<ha-icon icon="' + icon + '" aria-hidden="true"></ha-icon>' +
           '<span class="toggle-text">' + this._escape(caption) + '</span>' +
-          '<span class="toggle-state">' + (pending ? "Zmieniam…" :
-          (good ? "ON" : state === "off" ? "OFF" : "—")) + '</span></button>');
+          '<span class="toggle-state">' + this._escape(stateLabel) + '</span></button>');
       }
+      const controlHint = !current.admin
+        ? '<div class="controls-note">Wyłączanie portu: włącz sterowanie portami Ethernet w Opcjach integracji ICX Manager.</div>'
+        : '';
       const portStatus = current.admin?.state === "off" ? "Wyłączony" :
         current.link?.state === "on" ? "Aktywny" : "Brak linku";
       const statusClass = current.admin?.state === "off" ? "disabled" :
@@ -242,7 +254,7 @@ class IcxManagerCard extends HTMLElement {
         '</h3><div class="description">' + this._escape(description) + '</div></div>' +
         '<span class="port-status ' + statusClass + '">' + portStatus + '</span></div>' +
         '<div class="metrics">' + rows + '</div>' +
-        '<div class="controls">' + controls.join("") + '</div>';
+        '<div class="controls">' + controls.join("") + '</div>' + controlHint;
     }
 
     const info = devices.length && !states.length
@@ -279,7 +291,7 @@ class IcxManagerCard extends HTMLElement {
       '.warning{color:var(--error-color)}.empty{padding:15px}' +
       '@media(max-width:640px){.grid{grid-template-columns:repeat(' +
       mobile + ',minmax(0,1fr))}.metrics{grid-template-columns:1fr}}' +
-      "ha-icon{--mdc-icon-size:18px;flex-shrink:0}ha-card{padding:20px}.heading{flex-wrap:wrap;align-items:center;margin-bottom:17px}.power{padding:9px 13px;border:1px solid var(--divider-color);border-radius:12px;background:var(--card-background-color);font-size:23px}.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-bottom:18px}.badge{display:flex;flex-direction:row;align-items:center;justify-content:center;gap:7px;min-width:0;padding:10px 8px;border-radius:12px;border:1px solid var(--divider-color);background:var(--card-background-color);white-space:nowrap}.badge small{font-size:11px;color:var(--secondary-text-color);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.badge strong{font-size:19px;line-height:1.15;font-weight:700;font-variant-numeric:tabular-nums;flex-shrink:0}.badge ha-icon{color:var(--primary-color);--mdc-icon-size:21px;flex-shrink:0}.badge.link ha-icon{color:#32865e}.badge.poe ha-icon{color:#d18a25}.grid{gap:7px}.port{border-radius:9px;transition:transform .15s,box-shadow .15s}.port:hover{transform:translateY(-1px);box-shadow:0 2px 9px rgba(0,0,0,.12)}.port:focus-visible{outline:3px solid var(--primary-color);outline-offset:2px}.legend{display:flex;flex-wrap:wrap;align-items:center;gap:13px;opacity:1;color:var(--secondary-text-color);margin:13px 0 17px}.legend>span{display:inline-flex;align-items:center;gap:6px}.dot{width:9px;height:9px;border-radius:50%;display:inline-block;background:var(--divider-color)}.dot.up{background:#248458}.dot.off{background:#b34a4a}.dot.poe{background:#d68a23}.details{background:var(--card-background-color);border:1px solid var(--divider-color);border-radius:15px;padding:17px 18px;box-shadow:0 3px 12px rgba(0,0,0,.025)}.detail-title{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}.description{margin:4px 0 0;color:var(--secondary-text-color);opacity:1}.port-status{border:1px solid var(--divider-color);border-radius:20px;padding:5px 9px;font-size:11px;white-space:nowrap;color:var(--secondary-text-color)}.port-status.up{color:#248458;border-color:#248458}.port-status.disabled{color:#b34a4a;border-color:#b34a4a}.metrics{gap:0 20px}.metric{display:grid;grid-template-columns:18px minmax(0,1fr) auto;align-items:center;gap:8px;padding:10px 0}.metric ha-icon{--mdc-icon-size:17px;color:var(--secondary-text-color)}.metric-label{min-width:0;color:var(--secondary-text-color)}.metric strong{font-variant-numeric:tabular-nums;font-weight:650;font-size:12px}.controls{margin-top:17px;gap:9px}.toggle{display:inline-flex;align-items:center;gap:9px;min-height:41px;padding:9px 11px;border-radius:10px;font:inherit;font-size:12px;font-weight:600}.toggle ha-icon{--mdc-icon-size:17px;color:#d18a25}.toggle.caution ha-icon{color:#b34a4a}.toggle-state{padding:3px 7px;border-radius:999px;background:var(--secondary-background-color);color:var(--secondary-text-color)}.toggle.on:not(.caution) .toggle-state{color:#248458}.toggle.on.caution .toggle-state{color:#b34a4a}.toggle:disabled{cursor:wait}.compact .metric.extra{display:none}.compact .metric{padding:7px 0}.compact .details{padding:12px 15px}.compact .detail-title{margin-bottom:6px}@media(max-width:640px){ha-card{padding:14px}.stats{gap:6px}.badge{padding:8px 6px;gap:5px}.badge ha-icon{--mdc-icon-size:16px}.badge strong{font-size:16px}.badge small{font-size:10px}.heading{align-items:flex-start}.details{padding:12px}}" +
+      "ha-icon{--mdc-icon-size:18px;flex-shrink:0}ha-card{padding:20px}.heading{flex-wrap:wrap;align-items:center;margin-bottom:17px}.power{padding:9px 13px;border:1px solid var(--divider-color);border-radius:12px;background:var(--card-background-color);font-size:23px}.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-bottom:18px}.badge{display:flex;flex-direction:row;align-items:center;justify-content:center;gap:7px;min-width:0;padding:10px 8px;border-radius:12px;border:1px solid var(--divider-color);background:var(--card-background-color);white-space:nowrap}.badge small{font-size:11px;color:var(--secondary-text-color);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.badge strong{font-size:19px;line-height:1.15;font-weight:700;font-variant-numeric:tabular-nums;flex-shrink:0}.badge ha-icon{color:var(--primary-color);--mdc-icon-size:21px;flex-shrink:0}.badge.link ha-icon{color:#32865e}.badge.poe ha-icon{color:#d18a25}.grid{gap:7px}.port{border-radius:9px;transition:transform .15s,box-shadow .15s}.port:hover{transform:translateY(-1px);box-shadow:0 2px 9px rgba(0,0,0,.12)}.port:focus-visible{outline:3px solid var(--primary-color);outline-offset:2px}.legend{display:flex;flex-wrap:wrap;align-items:center;gap:13px;opacity:1;color:var(--secondary-text-color);margin:13px 0 17px}.legend>span{display:inline-flex;align-items:center;gap:6px}.dot{width:9px;height:9px;border-radius:50%;display:inline-block;background:var(--divider-color)}.dot.up{background:#248458}.dot.off{background:#b34a4a}.dot.poe{background:#d68a23}.details{background:var(--card-background-color);border:1px solid var(--divider-color);border-radius:15px;padding:17px 18px;box-shadow:0 3px 12px rgba(0,0,0,.025)}.detail-title{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}.description{margin:4px 0 0;color:var(--secondary-text-color);opacity:1}.port-status{border:1px solid var(--divider-color);border-radius:20px;padding:5px 9px;font-size:11px;white-space:nowrap;color:var(--secondary-text-color)}.port-status.up{color:#248458;border-color:#248458}.port-status.disabled{color:#b34a4a;border-color:#b34a4a}.metrics{gap:0 20px}.metric{display:grid;grid-template-columns:18px minmax(0,1fr) auto;align-items:center;gap:8px;padding:10px 0}.metric ha-icon{--mdc-icon-size:17px;color:var(--secondary-text-color)}.metric-label{min-width:0;color:var(--secondary-text-color)}.metric strong{font-variant-numeric:tabular-nums;font-weight:650;font-size:12px}.controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));margin-top:17px;gap:10px}.toggle{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;min-height:42px;padding:9px 10px;border-radius:10px;font:inherit;font-size:12px;font-weight:600}.toggle ha-icon{--mdc-icon-size:17px;color:#d18a25}.toggle.caution ha-icon{color:#b34a4a}.toggle-state{padding:3px 7px;border-radius:999px;background:var(--secondary-background-color);color:var(--secondary-text-color)}.toggle.on:not(.caution) .toggle-state{color:#248458}.toggle.on.caution .toggle-state{color:#b34a4a}.toggle:disabled{cursor:not-allowed;opacity:.55}.toggle-text{flex:1;text-align:left;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.toggle-state{flex-shrink:0}.toggle.ethernet{border-color:#b34a4a}.controls-note{font-size:11px;color:var(--secondary-text-color);margin-top:8px}.toggle.ethernet:hover:not(:disabled){border-color:var(--error-color)}@media(max-width:340px){.controls{grid-template-columns:1fr}}.compact .metric.extra{display:none}.compact .metric{padding:7px 0}.compact .details{padding:12px 15px}.compact .detail-title{margin-bottom:6px}@media(max-width:640px){ha-card{padding:14px}.stats{gap:6px}.badge{padding:8px 6px;gap:5px}.badge ha-icon{--mdc-icon-size:16px}.badge strong{font-size:16px}.badge small{font-size:10px}.heading{align-items:flex-start}.details{padding:12px}}" +
       '</style><ha-card class="' + (this._config.view === "compact" ? "compact" : "detailed") +
       '"><div class="heading"><div><h2>' + title +
       '</h2><div class="subtitle">' + subtitle + '</div></div><div class="power">' +

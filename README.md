@@ -2,7 +2,7 @@
 
 Lokalna integracja **Brocade / Ruckus ICX** dla Home Assistant, opracowana początkowo dla **ICX6450-48P**, korzystająca z **SNMPv3**.
 
-> **v0.2.5 — wersja testowa**. Kod sprawdzony pod kątem składni i testów funkcji pomocniczych. Wymaga jeszcze testów na fizycznym switchu przed normalnym użytkowaniem.
+> **v0.2.6 — wersja testowa**. Kod sprawdzony pod kątem składni i testów funkcji pomocniczych. Wymaga jeszcze testów na fizycznym switchu przed normalnym użytkowaniem.
 
 ## Funkcje
 
@@ -149,3 +149,12 @@ Jeżeli po aktualizacji karta nadal wygląda jak wcześniej, wyczyść cache (Ct
 Po aktualizacji i restarcie HA integracja w trybie **Lovelace Resources: storage** tworzy lub aktualizuje istniejący zasób `/icx-manager/icx-manager-card.js?v=0.2.5` automatycznie, na podstawie wersji manifestu. Nie trzeba ręcznie zwiększać cyferek w ustawieniach Zasoby. Modyfikowany jest tylko własny adres zasobu ICX Manager, inne karty pozostają nietknięte. W trybie YAML zarządzanie zasobami pozostaje ręczne.
 
 Odświeżenie strony lub aplikacji może być nadal wymagane, jeśli interfejs przechowuje starszy kod w pamięci podręcznej.
+
+
+## Sterowanie portem obok PoE (v0.2.6)
+
+W szczegółach portu są teraz **dwa przyciski obok siebie**: „Zasilanie PoE” oraz „Wyłącz port”/„Włącz port”. Drugi z nich zmienia administracyjny stan Ethernet przez SNMP ifAdminStatus, niezależnie od PoE. Wyłączenie portu wymaga potwierdzenia, ponieważ może odciąć uplink switcha lub Home Assistanta.
+
+Sterowanie Ethernet wymaga włączenia **Ustawienia → Urządzenia i usługi → ICX Manager → Konfiguruj (Opcje) → Sterowanie portami Ethernet** oraz użytkownika SNMPv3 z uprawnieniem SET do ifAdminStatus. Gdy nie jest włączone, przycisk jest widoczny, ale nieaktywny, z informacją jak go uruchomić. Porty bez PoE mają nieaktywny przycisk PoE.
+
+**Uwaga:** nie wyłączaj portu uplinkowego ani portu, którym komunikują się ze switchem Home Assistant lub router. Potwierdzenie w karcie nie zabezpiecza przed użyciem usług HA i innych interfejsów.
