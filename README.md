@@ -2,7 +2,7 @@
 
 Lokalna integracja **Brocade / Ruckus ICX** dla Home Assistant, opracowana początkowo dla **ICX6450-48P**, korzystająca z **SNMPv3**.
 
-> **v0.2.7 — wersja testowa**. Kod sprawdzony pod kątem składni i testów funkcji pomocniczych. Wymaga jeszcze testów na fizycznym switchu przed normalnym użytkowaniem.
+> **v0.3.0 — wersja testowa**. Kod sprawdzony pod kątem składni i testów funkcji pomocniczych. Wymaga jeszcze testów na fizycznym switchu przed normalnym użytkowaniem.
 
 ## Funkcje
 
@@ -175,3 +175,26 @@ Opcja **Zablokuj wyłączanie wszystkich portów z tej karty**, w sekcji **Bezpi
 Ograniczenia nie blokują **włączania** portów wyłączonych administracyjnie i nie dotyczą sterowania **PoE**. Zabezpieczenie działa wyłącznie w tej karcie Lovelace — inne karty, automatyzacje i bezpośrednie SNMP SET mogą nadal wyłączać porty, jeśli użytkownik posiada stosowne uprawnienia. Aby przyciski sterowania Ethernet były dostępne, włącz również tę funkcję w **Opcjach integracji**.
 
 Wydanie `v0.2.7` jest publikowane jako zwykły (nie pre-release) GitHub Release, aby HACS mógł wykorzystywać numerowaną wersję.
+
+
+## Network Flow Card — encje zbiorcze (v0.3.0)
+
+Integracja udostępnia następujące **dodatkowe encje** (w jednym urządzeniu ICX w Home Assistant):
+
+| Typ / nazwa | Znaczenie |
+| --- | --- |
+| Binary sensor **Online** | ON po udanym odpytywaniu przez SNMP, OFF gdy bieżący odczyt kończy się błędem |
+| Sensor **Active ports** | Liczba wszystkich fizycznych portów z łączem UP (łącznie z uplinkiem) |
+| Sensor **Active downlink ports** | Liczba aktywnych portów z wyłączeniem uplinku oraz wskazanych portów |
+| Sensor **Uplink RX** | Ruch Mbit/s przychodzący *do wybranego portu*, nie suma wszystkich portów |
+| Sensor **Uplink TX** | Ruch Mbit/s wychodzący *z wybranego portu*, nie suma wszystkich portów |
+
+**Uwaga:** liczniki wskazują porty z aktywnym linkiem, nie liczbę rzeczywistych urządzeń. Jeden port może łączyć switch lub AP obsługujący wielu klientów. Podczas pierwszego odczytu wartości ruchu mogą być nieznane: potrzebne są dwie próbki 64-bitowych liczników. Gdy uplink nie jest wybrany, RX/TX pozostają `unknown`, a nie zerowe.
+
+### Jak skonfigurować uplink i wykluczenia
+
+Wejdź w **Ustawienia → Urządzenia i usługi → ICX Manager → Konfiguruj**. Wybierz port uplink z listy interfejsów fizycznych (np. `1/2/1`), a następnie opcjonalnie zaznacz porty wykluczone z licznika downlink. To ustawienia monitoringu, nie wysyłają komend wyłączających porty. Zachowano istniejącą opcję sterowania portami Ethernet. Po zapisie integracja przeładuje się z nowymi ustawieniami.
+
+Przy tworzeniu diagramu **Network Flow Card** przypisz `Online` do statusu switcha, a `Active downlink ports` do `Connected Devices` (pamiętając, że to przybliżony licznik łączy). PoE podłącz jako *Manual*, wybierając istniejącą encję `Total PoE consumption` — **nie sumuj jednocześnie całkowitej mocy i jej składowych per-port**.
+
+Rzeczywiste `entity_id` sprawdzisz w **Ustawienia → Urządzenia i usługi → ICX Manager → Encje**. Zależą one od nazwy urządzenia i wcześniejszych zmian nazw w HA. Status Online informuje o ostatnim głównym odczycie SNMP; przy błędzie podczas pierwszego uruchomienia integracja może nie utworzyć encji przed odzyskaniem łączności.
