@@ -26,10 +26,12 @@
   "options": {
     "step": {
       "init": {
-        "title": "Manage Ethernet ports",
-        "description": "CAUTION: Disabling the uplink or management port may cut off Home Assistant. Only enable if you know the port layout.",
+        "title": "ICX Manager — Network Flow and port controls",
+        "description": "Choose the physical uplink and ports excluded from the downlink count. The active ports sensor always counts all physical links. These are port counts, not a count of client devices. Only Ethernet control requires SNMP SET permission.",
         "data": {
-          "enable_port_control": "Enable Ethernet admin ON/OFF (dangerous)"
+          "enable_port_control": "Enable Ethernet admin ON/OFF (dangerous)",
+          "uplink_port": "Uplink port (router or upstream switch)",
+          "excluded_ports": "Ports to exclude from active downlink count"
         }
       }
     }
