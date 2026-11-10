@@ -3,13 +3,21 @@
 from homeassistant.components.sensor import SensorEntity, SensorDeviceClass, SensorStateClass
 from homeassistant.const import UnitOfPower, UnitOfTime
 
-from .const import DOMAIN
+from .const import DOMAIN, CONF_UPLINK_PORT, CONF_EXCLUDED_PORTS, NO_UPLINK
+from .network import count_link_up, active_downlinks, uplink_mbps
 from .entity import IcxEntity
 
 
 async def async_setup_entry(hass, entry, async_add_entities):
     coordinator = hass.data[DOMAIN][entry.entry_id]
-    entities = [IcxUptime(coordinator, entry), IcxPoeTotal(coordinator, entry)]
+    entities = [
+        IcxUptime(coordinator, entry),
+        IcxPoeTotal(coordinator, entry),
+        IcxActivePorts(coordinator, entry),
+        IcxActiveDownlinkPorts(coordinator, entry),
+        IcxUplinkThroughput(coordinator, entry, "rx"),
+        IcxUplinkThroughput(coordinator, entry, "tx"),
+    ]
     for port in coordinator.data["ports"].values():
         if port["poe_index"] is not None:
             entities.append(IcxPoeWatts(coordinator, entry, port))
@@ -128,3 +136,81 @@ class IcxPortMetric(IcxEntity, SensorEntity):
     @property
     def native_value(self):
         return self.port[self._field] if self.port else None
+
+
+
+class IcxActivePorts(IcxEntity, SensorEntity):
+    """Count of physical Ethernet interfaces whose link status is UP."""
+
+    _attr_name = "Active ports"
+    _attr_icon = "mdi:ethernet"
+    _attr_state_class = SensorStateClass.MEASUREMENT
+
+    def __init__(self, coordinator, entry):
+        super().__init__(coordinator, entry, "active_ports")
+
+    @property
+    def native_value(self):
+        return count_link_up(self.coordinator.data["ports"])
+
+    @property
+    def extra_state_attributes(self):
+        return {**super().extra_state_attributes, "count_type": "ports_not_clients"}
+
+
+class IcxActiveDownlinkPorts(IcxEntity, SensorEntity):
+    """Count of active physical links excluding uplink and excluded ports."""
+
+    _attr_name = "Active downlink ports"
+    _attr_icon = "mdi:lan-connect"
+    _attr_state_class = SensorStateClass.MEASUREMENT
+
+    def __init__(self, coordinator, entry):
+        super().__init__(coordinator, entry, "active_downlink_ports")
+        self._entry = entry
+
+    @property
+    def native_value(self):
+        return active_downlinks(
+            self.coordinator.data["ports"],
+            self._entry.options.get(CONF_UPLINK_PORT, NO_UPLINK),
+            self._entry.options.get(CONF_EXCLUDED_PORTS, []),
+        )
+
+    @property
+    def extra_state_attributes(self):
+        return {
+            **super().extra_state_attributes,
+            "uplink_port": self._entry.options.get(CONF_UPLINK_PORT, NO_UPLINK),
+            "excluded_ports": list(self._entry.options.get(CONF_EXCLUDED_PORTS, [])),
+            "count_type": "ports_not_clients",
+        }
+
+
+class IcxUplinkThroughput(IcxEntity, SensorEntity):
+    """Direct throughput in Mbit/s for an explicitly selected uplink."""
+
+    _attr_native_unit_of_measurement = "Mbit/s"
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_suggested_display_precision = 2
+
+    def __init__(self, coordinator, entry, direction):
+        super().__init__(coordinator, entry, f"uplink_{direction}_mbps")
+        self._entry = entry
+        self.direction = direction
+        self._attr_name = f"Uplink {direction.upper()}"
+        self._attr_icon = "mdi:download-network" if direction == "rx" else "mdi:upload-network"
+
+    @property
+    def native_value(self):
+        return uplink_mbps(
+            self.coordinator.data["ports"],
+            self._entry.options.get(CONF_UPLINK_PORT, NO_UPLINK),
+            self.direction,
+        )
+
+    @property
+    def extra_state_attributes(self):
+        selected = self._entry.options.get(CONF_UPLINK_PORT, NO_UPLINK)
+        return {**super().extra_state_attributes,
+                "uplink_port": selected if selected != NO_UPLINK else None}
