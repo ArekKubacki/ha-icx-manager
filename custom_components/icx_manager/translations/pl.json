@@ -26,10 +26,12 @@
   "options": {
     "step": {
       "init": {
-        "title": "Zarządzanie portami Ethernet",
-        "description": "UWAGA: Wyłączenie uplinku lub portu zarządzania może odciąć Home Assistant. Używaj tylko jeśli znasz układ połączeń.",
+        "title": "ICX Manager — Network Flow i porty",
+        "description": "Wskaż port uplink oraz porty wykluczone z licznika downlink. Sensor aktywnych portów obejmuje wszystkie łącza, także uplink. To liczba portów, nie liczba urządzeń końcowych. Tylko sterowanie Ethernet wymaga uprawnień SNMP SET.",
         "data": {
-          "enable_port_control": "Włącz administracyjne ON/OFF portów Ethernet (ryzykowne)"
+          "enable_port_control": "Włącz administracyjne ON/OFF portów Ethernet (ryzykowne)",
+          "uplink_port": "Port uplink (router lub switch nadrzędny)",
+          "excluded_ports": "Porty wykluczone z licznika downlink"
         }
       }
     }
