@@ -13,7 +13,8 @@ from homeassistant.helpers import selector
 from .const import (
     CONF_AUTH_PASSWORD, CONF_AUTH_PROTOCOL,
     CONF_PRIV_PASSWORD, CONF_PRIV_PROTOCOL, DEFAULT_PORT, DOMAIN,
-    CONF_ENABLE_PORT_CONTROL,
+    CONF_ENABLE_PORT_CONTROL, CONF_UPLINK_PORT, CONF_EXCLUDED_PORTS,
+    NO_UPLINK,
 )
 from .snmp import IcxSnmpClient, SnmpError
 
@@ -82,18 +83,70 @@ class IcxConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return IcxOptionsFlow()
 
 
+def _port_sort(label: str) -> tuple[int, ...]:
+    """Sort interfaces numerically, e.g. 1/1/2 before 1/1/10."""
+    try:
+        return tuple(int(chunk) for chunk in label.split("/"))
+    except ValueError:
+        return (99999,)
+
+
 class IcxOptionsFlow(config_entries.OptionsFlow):
-    """Extra access to dangerous port administration is opt-in."""
+    """Dangerous Ethernet control and optional network-flow aggregates."""
 
     async def async_step_init(self, user_input=None):
         if user_input is not None:
-            return self.async_create_entry(title="", data=user_input)
+            return self.async_create_entry(title="", data={
+                CONF_ENABLE_PORT_CONTROL: user_input.get(CONF_ENABLE_PORT_CONTROL, False),
+                CONF_UPLINK_PORT: user_input.get(CONF_UPLINK_PORT, NO_UPLINK),
+                CONF_EXCLUDED_PORTS: user_input.get(CONF_EXCLUDED_PORTS, []),
+            })
+
+        saved = self.config_entry.options
+        coordinator = self.hass.data.get(DOMAIN, {}).get(self.config_entry.entry_id)
+        ports = coordinator.data.get("ports", {}) if coordinator and coordinator.data else {}
+        names = {p["label"]: p.get("alias", "") for p in ports.values()}
+
+        saved_uplink = saved.get(CONF_UPLINK_PORT, NO_UPLINK)
+        saved_excluded = list(saved.get(CONF_EXCLUDED_PORTS, []))
+        # Preserve selected interfaces if the SNMP table is temporarily incomplete.
+        for label in (saved_uplink, *saved_excluded):
+            if label and label != NO_UPLINK:
+                names.setdefault(label, "")
+
+        port_options = [
+            selector.SelectOptionDict(
+                value=label,
+                label=f"{label} — {alias}" if alias else label,
+            )
+            for label, alias in sorted(names.items(), key=lambda x: _port_sort(x[0]))
+        ]
+        uplink_options = [
+            selector.SelectOptionDict(value=NO_UPLINK, label="— Not configured —"),
+            *port_options,
+        ]
+
         return self.async_show_form(
             step_id="init",
             data_schema=vol.Schema({
                 vol.Required(
                     CONF_ENABLE_PORT_CONTROL,
-                    default=self.config_entry.options.get(CONF_ENABLE_PORT_CONTROL, False),
+                    default=saved.get(CONF_ENABLE_PORT_CONTROL, False),
                 ): bool,
+                vol.Required(
+                    CONF_UPLINK_PORT,
+                    default=saved_uplink,
+                ): selector.SelectSelector(selector.SelectSelectorConfig(
+                    options=uplink_options,
+                    mode=selector.SelectSelectorMode.DROPDOWN,
+                )),
+                vol.Optional(
+                    CONF_EXCLUDED_PORTS,
+                    default=saved_excluded,
+                ): selector.SelectSelector(selector.SelectSelectorConfig(
+                    options=port_options,
+                    multiple=True,
+                    mode=selector.SelectSelectorMode.DROPDOWN,
+                )),
             }),
         )
