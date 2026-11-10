@@ -34,10 +34,10 @@ jobs:
                   body: [
                     'ICX Manager ' + tag,
                     '',
-                    '- Per-port Ethernet shutdown permission configured in the card editor.',
-                    '- Global card shutdown lock overrides per-port permissions.',
-                    '- Ethernet ports can still be re-enabled and PoE remains independent.',
-                    '- Default card shutdown permission is denied until explicitly enabled.',
+                    '- SNMP switch Online status and active physical link count.',
+                    '- Active downlink count with configurable uplink and exclusions.',
+                    '- Direct RX/TX throughput from the chosen uplink, in Mbit/s.',
+                    '- All previous per-port administration, protection and PoE controls retained.',
                     '',
                     'Install or update from HACS, then restart Home Assistant.'
                   ].join('\n'),
