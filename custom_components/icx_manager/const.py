@@ -4,6 +4,9 @@ DOMAIN = "icx_manager"
 DEFAULT_PORT = 161
 SCAN_INTERVAL = 30
 CONF_ENABLE_PORT_CONTROL = "enable_port_control"
+CONF_UPLINK_PORT = "uplink_port"
+CONF_EXCLUDED_PORTS = "excluded_ports"
+NO_UPLINK = "none"
 
 CONF_AUTH_PROTOCOL = "auth_protocol"
 CONF_AUTH_PASSWORD = "auth_password"
